@@ -210,8 +210,30 @@ function renderReport() {
 }
 
 // ---------- Akcije ----------
-$("prev").onclick = () => { cur = shiftMonth(cur, -1); $("vDate").value = ""; render(); };
-$("next").onclick = () => { cur = shiftMonth(cur, 1); $("vDate").value = ""; render(); };
+function goTo(k) { cur = k; $("vDate").value = ""; closePicker(); render(); }
+$("prev").onclick = () => goTo(shiftMonth(cur, -1));
+$("next").onclick = () => goTo(shiftMonth(cur, 1));
+
+// Brzi izbor meseca i godine
+let pickYear = today.getFullYear();
+const hasData = (k) => { const m = monthRecs[k]; return !!(m && (m.salary || (m.extra || []).length)) || expenses.some((e) => e.month === k); };
+function renderPicker() {
+  $("pyLabel").textContent = pickYear;
+  const now = ym(today);
+  $("pgrid").innerHTML = MONTHS.map((name, i) => {
+    const k = `${pickYear}-${pad(i + 1)}`;
+    return `<button type="button" class="pm${hasData(k) ? " has" : ""}${k === now ? " today" : ""}" data-pm="${k}" aria-current="${k === cur}">${name.slice(0, 3)}</button>`;
+  }).join("");
+}
+function openPicker() { pickYear = +cur.split("-")[0]; renderPicker(); $("picker").hidden = false; $("mlabel").setAttribute("aria-expanded", "true"); }
+function closePicker() { $("picker").hidden = true; $("mlabel").setAttribute("aria-expanded", "false"); }
+$("mlabel").onclick = () => ($("picker").hidden ? openPicker() : closePicker());
+$("pyPrev").onclick = () => { pickYear--; renderPicker(); };
+$("pyNext").onclick = () => { pickYear++; renderPicker(); };
+$("pToday").onclick = () => goTo(ym(today));
+$("pgrid").addEventListener("click", (e) => { const b = e.target.closest("[data-pm]"); if (b) goTo(b.dataset.pm); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("picker").hidden) { closePicker(); $("mlabel").focus(); } });
+document.addEventListener("click", (e) => { if (!$("picker").hidden && !e.target.closest("#picker, #mlabel")) closePicker(); });
 
 $("salary").addEventListener("change", (e) => {
   const val = parse(e.target.value);

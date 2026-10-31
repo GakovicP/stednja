@@ -58,7 +58,19 @@ input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid
 .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .top h1{font-size:1.35rem}
 .month{display:flex;align-items:center;gap:4px}
-.month span{font-weight:600;min-width:9.5em;text-align:center}
+.mbtn{font-weight:600;min-width:9.5em;text-align:center;border:0;background:none;color:var(--ink);padding:6px 4px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.mbtn:hover{background:var(--card)}
+.mbtn::after{content:"▾";font-size:.75em;color:var(--muted)}
+.picker{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.pyear{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pyear strong{font-family:var(--display);font-size:1.15rem}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pm{position:relative;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 0;font-size:.9rem}
+.pm.has::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.pm.today{border-color:var(--accent)}
+.pm[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pm[aria-current="true"]::after{background:#fff}
+.pfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
 .iconbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;width:36px;height:36px;display:grid;place-items:center}
 
 .balance{background:var(--accent);color:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px}
@@ -129,7 +141,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:14px;p
 .verdict{margin:0;font-size:.92rem}
 .sample{background:var(--spend-soft);color:var(--ink);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.88rem}
 .sample button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;white-space:nowrap}
-@media (max-width:420px){.balance .big{font-size:2rem}.month span{min-width:7.5em;font-size:.9rem}}
+@media (max-width:420px){.balance .big{font-size:2rem}.mbtn{min-width:7.5em;font-size:.9rem}.pgrid{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:no-preference){.meter i,.stack i{transition:width .3s}}
 </style>
 </head>
@@ -150,9 +162,19 @@ section{background:var(--card);border:1px solid var(--line);border-radius:14px;p
     <h1>Štedna knjižica</h1>
     <div class="month">
       <button class="iconbtn" id="prev" aria-label="Prethodni mesec">‹</button>
-      <span id="mlabel"></span>
+      <button type="button" class="mbtn" id="mlabel" aria-expanded="false" aria-controls="picker" title="Izaberi mesec"></button>
       <button class="iconbtn" id="next" aria-label="Sledeći mesec">›</button>
     </div>
+  </div>
+
+  <div class="picker" id="picker" hidden>
+    <div class="pyear">
+      <button type="button" class="iconbtn" id="pyPrev" aria-label="Prethodna godina">‹</button>
+      <strong class="num" id="pyLabel"></strong>
+      <button type="button" class="iconbtn" id="pyNext" aria-label="Sledeća godina">›</button>
+    </div>
+    <div class="pgrid" id="pgrid"></div>
+    <div class="pfoot"><span>Tačka = mesec sa unosima</span><button type="button" class="link" id="pToday">Idi na tekući mesec</button></div>
   </div>
 
 
