@@ -56,6 +56,18 @@ bash deploy/install.sh
 
 Skripta preuzima PocketBase, pravi sistemskog korisnika `stednja`, podešava SELinux ako je uključen i pokreće servis na `127.0.0.1:8090`. Na kraju treba da vidiš `PocketBase radi.`
 
+## 5a. Ako portove 80/443 već drži Caddy u Docker-u
+
+PocketBase se vezuje na adresu docker0 interfejsa, da bi Caddy iz kontejnera mogao do njega:
+
+```bash
+DOCKER_IP=$(ip -4 -o addr show docker0 | awk '{print $4}' | cut -d/ -f1)
+sed -i "s/--http=127.0.0.1:8090/--http=${DOCKER_IP}:8090/" /etc/systemd/system/stednja.service
+systemctl daemon-reload && systemctl restart stednja
+```
+
+Zatim dodaj sadržaj `deploy/Caddyfile.snippet` (sa pravim domenom i IP-om) na kraj Caddyfile-a i uradi `caddy reload` u kontejneru. HTTPS Caddy rešava sam, pa korak 6 preskačeš.
+
 ## 5. nginx
 
 ```bash

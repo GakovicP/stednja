@@ -1,0 +1,7 @@
+# Dodaje se na kraj postojećeg Caddyfile-a (Caddy u Docker-u, npr. iz AndjelaCooking-a).
+# DOCKER_IP = adresa docker0 interfejsa na hostu (obično 172.17.0.1).
+stednja.tvojdomen.rs {
+	@admin path /_/ /_/* /api/collections/_superusers/*
+	respond @admin 403
+	reverse_proxy DOCKER_IP:8090
+}

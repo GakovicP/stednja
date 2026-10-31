@@ -5,4 +5,5 @@ cd /opt/stednja
 git pull
 systemctl restart stednja
 sleep 2
-curl -fsS http://127.0.0.1:8090/api/health && echo && echo "==> Azurirano."
+ADDR=$(grep -o -- '--http=[^ ]*' /etc/systemd/system/stednja.service | cut -d= -f2)
+curl -fsS "http://${ADDR}/api/health" && echo && echo "==> Azurirano."
