@@ -98,7 +98,9 @@ Admin panel nije dostupan spolja, pa mu pristupaš preko SSH tunela sa svog rač
 ssh -L 8090:127.0.0.1:8090 root@IP_SERVERA
 ```
 
-Otvori `http://localhost:8090/_/`, prijavi se kao administrator i u kolekciji **users** napravi dva zapisa (New record): email, lozinka i **name** (to ime se prikazuje uz troškove). Javna registracija je isključena, pa niko drugi ne može da napravi nalog.
+Otvori `http://localhost:8090/_/`, prijavi se kao administrator i u kolekciji **users** napravi **svoj** nalog (New record): email, lozinka, **name** i uključi **is_admin**. Ovo radiš samo jednom.
+
+Sve ostale naloge praviš iz same aplikacije: nalog sa `is_admin` na dnu stranice vidi odeljak **Nalozi**. Javna registracija je isključena, a običan korisnik ne može sam sebi da dodeli administratorsku ulogu.
 
 U panelu je dobro uključiti i:
 - **Settings → Backups**: automatski bekap, npr. svake noći (`0 3 * * *`)

@@ -271,6 +271,46 @@ document.addEventListener("click", (e) => {
   });
 });
 
+// ---------- Nalozi (samo administrator aplikacije) ----------
+const isAdmin = () => !!pb.authStore.record?.is_admin;
+let pendingDelete = null;
+
+async function renderAccounts() {
+  $("accounts").hidden = !isAdmin();
+  if (!isAdmin()) return;
+  try {
+    const users = await pb.collection("users").getFullList({ sort: "created" });
+    const me = pb.authStore.record.id;
+    $("userList").innerHTML = users.map((u) => `<div class="item"><span class="grow">${esc(u.name || "Bez imena")}${u.is_admin ? '<span class="tag">admin</span>' : ""}${u.email ? `<small>${esc(u.email)}</small>` : ""}</span>${u.id === me ? '<span class="hint">ti</span>' : `<button type="button" class="del${pendingDelete === u.id ? " confirm" : ""}" data-u="${u.id}" aria-label="Obriši nalog ${esc(u.name || u.email)}">${pendingDelete === u.id ? "Obriši?" : "✕"}</button>`}</div>`).join("");
+  } catch (err) { handleError(err); }
+}
+
+$("uAdd").onclick = async () => {
+  $("uErr").textContent = "";
+  const name = $("uName").value.trim(), email = $("uEmail").value.trim(), pass = $("uPass").value;
+  if (!email) return $("uEmail").focus();
+  if (pass.length < 8) { $("uErr").textContent = "Lozinka mora imati najmanje 8 znakova."; return $("uPass").focus(); }
+  try {
+    await pb.collection("users").create({ name, email, password: pass, passwordConfirm: pass, emailVisibility: true, is_admin: $("uAdmin").checked });
+    $("uName").value = $("uEmail").value = $("uPass").value = ""; $("uAdmin").checked = false;
+    setStatus("Nalog napravljen"); setTimeout(() => setStatus(""), 2000);
+    renderAccounts();
+  } catch (err) {
+    const d = err?.response?.data || {};
+    $("uErr").textContent = d.email ? "Taj email je neispravan ili već postoji." : d.password ? "Lozinka nije prihvaćena (najmanje 8 znakova)." : "Nalog nije napravljen. Pokušaj ponovo.";
+  }
+};
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-u]"); if (!b) return;
+  const id = b.dataset.u;
+  if (pendingDelete !== id) { pendingDelete = id; renderAccounts(); setTimeout(() => { if (pendingDelete === id) { pendingDelete = null; renderAccounts(); } }, 4000); return; }
+  pendingDelete = null;
+  try { await pb.collection("users").delete(id); setStatus("Nalog obrisan"); setTimeout(() => setStatus(""), 2000); }
+  catch (err) { handleError(err); }
+  renderAccounts();
+});
+
 // ---------- Prijava i uživo osvežavanje ----------
 let liveTimer = null;
 const liveRefresh = () => { clearTimeout(liveTimer); liveTimer = setTimeout(() => { if (!busy) refresh(); }, 300); };
@@ -291,7 +331,7 @@ async function showApp() {
   $("whoName").textContent = u?.name || u?.email || "";
   $("login").hidden = true; $("app").hidden = false;
   setStatus("Učitavam…");
-  try { await loadAll(); await syncFreeze(); render(); setStatus(""); startLive(); }
+  try { await loadAll(); await syncFreeze(); render(); setStatus(""); startLive(); renderAccounts(); }
   catch (err) { handleError(err); }
 }
 
