@@ -1,0 +1,20 @@
+[Unit]
+Description=Stedna knjizica (PocketBase)
+After=network.target
+
+[Service]
+Type=simple
+User=stednja
+Group=stednja
+WorkingDirectory=/opt/stednja
+ExecStart=/opt/stednja/pocketbase serve --http=127.0.0.1:8090 --dir=/opt/stednja/pb_data --publicDir=/opt/stednja/pb_public --migrationsDir=/opt/stednja/pb_migrations
+Restart=always
+RestartSec=5
+LimitNOFILE=4096
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
