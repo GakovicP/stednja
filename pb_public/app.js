@@ -369,6 +369,25 @@ document.addEventListener("click", async (e) => {
   renderAccounts();
 });
 
+// ---------- Boja aplikacije ----------
+const PAL_COLOR = { zelena: "#1E6B57", roze: "#F6C1D1" };
+function applyPalette(p) {
+  p = p === "roze" ? "roze" : "zelena";
+  if (p === "roze") document.documentElement.dataset.palette = "roze"; else delete document.documentElement.dataset.palette;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", PAL_COLOR[p]);
+  document.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pal === p)));
+  try { localStorage.setItem("stednja_palette", p); } catch (_) {}
+}
+document.querySelectorAll(".sw").forEach((b) => b.addEventListener("click", async () => {
+  const p = b.dataset.pal;
+  applyPalette(p);
+  const u = pb.authStore.record;
+  if (u && u.palette !== p) {
+    try { await pb.collection("users").update(u.id, { palette: p }); } catch (err) { console.warn("Boja nije sačuvana na nalogu", err); }
+  }
+}));
+applyPalette((() => { try { return localStorage.getItem("stednja_palette"); } catch (_) { return null; } })());
+
 // ---------- Prijava i uživo osvežavanje ----------
 let liveTimer = null;
 const liveRefresh = () => { clearTimeout(liveTimer); liveTimer = setTimeout(() => { if (!busy) refresh(); }, 300); };
@@ -387,6 +406,7 @@ function showLogin() {
 }
 
 async function showApp() {
+  if (pb.authStore.record?.palette) applyPalette(pb.authStore.record.palette);
   shownUser = pb.authStore.record?.id || null;
   const u = pb.authStore.record;
   $("whoName").textContent = u?.name || u?.email || "";
