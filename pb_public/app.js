@@ -349,12 +349,14 @@ async function startLive() {
 }
 
 function showLogin() {
+  shownUser = null;
   fixed = []; monthRecs = {}; expenses = []; cur = ym(today);
   pb.realtime.unsubscribe().catch(() => {});
   $("app").hidden = true; $("login").hidden = false; $("lEmail").focus();
 }
 
 async function showApp() {
+  shownUser = pb.authStore.record?.id || null;
   const u = pb.authStore.record;
   $("whoName").textContent = u?.name || u?.email || "";
   $("login").hidden = true; $("app").hidden = false;
@@ -381,15 +383,13 @@ $("logout").onclick = () => { pb.authStore.clear(); showLogin(); };
 document.addEventListener("visibilitychange", () => { if (!document.hidden && pb.authStore.isValid) refresh(); });
 
 // Prijava se čuva u pregledaču: ako se u drugom tabu prijavi ili odjavi drugi nalog, osveži ovaj tab
-const startUser = () => pb.authStore.record?.id || null;
-let shownUser = startUser();
+let shownUser = pb.authStore.record?.id || null;
 window.addEventListener("storage", (e) => {
   if (e.key !== null && e.key !== "pocketbase_auth") return;
   let next = null;
   try { next = JSON.parse(e.newValue || "null")?.record?.id || null; } catch (_) {}
   if (next !== shownUser) location.reload();
 });
-pb.authStore.onChange(() => { shownUser = startUser(); });
 
 (async () => {
   if (pb.authStore.isValid) {
