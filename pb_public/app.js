@@ -38,12 +38,17 @@ let selCat = "namirnice";
 let busy = false;
 
 // Podaci iz baze
-let fixed = [];          // [{id,name,amount}]
+let fixed = [];          // [{id,name,amount,installments,start_month}]
 let monthRecs = {};      // key -> record {id,key,salary,extra,fixed_snap}
 let expenses = [];       // [{id,month,date,amount,cat,note,by}]
 
 const me = () => pb.authStore.record?.id;
-const fixSum = () => sumAmt(fixed);
+// Krediti: trošak sa brojem rata važi samo od prve rate, toliko meseci
+const monthDiff = (a, b) => { const [ya, ma] = a.split("-").map(Number), [yb, mb] = b.split("-").map(Number); return (ya - yb) * 12 + (ma - mb); };
+const isLoan = (f) => (f.installments || 0) > 0 && /^\d{4}-\d{2}$/.test(f.start_month || "");
+const loanIndex = (f, k) => monthDiff(k, f.start_month) + 1; // koja je rata u mesecu k (1..N)
+const activeIn = (f, k) => { if (!isLoan(f)) return true; const i = loanIndex(f, k); return i >= 1 && i <= f.installments; };
+const fixedFor = (k) => fixed.filter((f) => activeIn(f, k));
 const hasPay = (k) => (monthRecs[k]?.salary || 0) > 0;
 const latestPay = () => Object.keys(monthRecs).filter(hasPay).sort().pop() || null;
 const isClosed = (k) => { const L = latestPay(); return !!L && k < L; };
@@ -53,7 +58,7 @@ function monthCalc(k) {
   const m = monthRecs[k];
   const inc = (m?.salary || 0) + sumAmt(m?.extra);
   const vr = sumAmt(monthExpenses(k));
-  const fx = Array.isArray(m?.fixed_snap) ? sumAmt(m.fixed_snap) : fixSum();
+  const fx = Array.isArray(m?.fixed_snap) ? sumAmt(m.fixed_snap) : sumAmt(fixedFor(k));
   return { inc, fix: inc ? fx : 0, vr };
 }
 
@@ -108,9 +113,9 @@ async function ensureMonth(k) {
 
 // Mesec se zatvara kad se unese plata za neki kasniji mesec: tada se zamrzavaju njegovi stalni troškovi.
 async function syncFreeze() {
-  const snap = fixed.map((f) => ({ name: f.name, amount: f.amount }));
   for (const k of Object.keys(monthRecs)) {
     const m = monthRecs[k];
+    const snap = fixedFor(k).map((f) => ({ name: isLoan(f) ? `${f.name} (rata ${loanIndex(f, k)}/${f.installments})` : f.name, amount: f.amount }));
     const frozen = Array.isArray(m.fixed_snap);
     if (isClosed(k) && !frozen) monthRecs[k] = await pb.collection("months").update(m.id, { fixed_snap: snap });
     else if (!isClosed(k) && frozen) monthRecs[k] = await pb.collection("months").update(m.id, { fixed_snap: null });
@@ -155,13 +160,30 @@ function render() {
   $("extraList").innerHTML = extra.map((e, i) => `<div class="item"><span class="grow">${esc(e.name)}</span><span class="num">${fmt(e.amount)}</span><button class="del" data-x="${i}" aria-label="Obriši">✕</button></div>`).join("");
 
   // Stalni troškovi
-  const fl = closed && Array.isArray(m?.fixed_snap) ? m.fixed_snap : fixed;
-  $("fixSum").textContent = "−" + fmt(sumAmt(fl));
+  const snapList = closed && Array.isArray(m?.fixed_snap) ? m.fixed_snap : null;
+  $("fixSum").textContent = "−" + fmt(snapList ? sumAmt(snapList) : sumAmt(fixedFor(cur)));
   $("fixHint").textContent = closed ? "Zamrznuti za ovaj mesec: izmene liste važe samo za otvorene mesece." : "Skidaju se automatski od plate. Kad uneseš sledeću platu, zamrzavaju se za ovaj mesec.";
-  $("fxName").parentElement.hidden = closed;
-  $("fixList").innerHTML = fl.length
-    ? fl.map((f) => `<div class="item"><span class="grow">${esc(f.name)}</span><span class="num">${fmt(f.amount)}</span>${closed ? "" : `<button class="del" data-f="${f.id}" aria-label="Obriši ${esc(f.name)}">✕</button>`}</div>`).join("")
-    : `<p class="hint">Još nema stalnih troškova.</p>`;
+  $("fxForm").hidden = closed;
+  if (snapList) {
+    $("fixList").innerHTML = snapList.length
+      ? snapList.map((f) => `<div class="item"><span class="grow">${esc(f.name)}</span><span class="num">${fmt(f.amount)}</span></div>`).join("")
+      : `<p class="hint">Nije bilo stalnih troškova.</p>`;
+  } else {
+    // aktivni prvo, zatim krediti koji tek počinju, pa otplaćeni
+    const rank = (f) => (activeIn(f, cur) ? 0 : loanIndex(f, cur) < 1 ? 1 : 2);
+    const list = [...fixed].sort((a, b) => rank(a) - rank(b));
+    $("fixList").innerHTML = list.length ? list.map((f) => {
+      let sub = "", cls = "";
+      if (isLoan(f)) {
+        const i = loanIndex(f, cur), N = f.installments, last = shiftMonth(f.start_month, N - 1);
+        if (i < 1) { cls = " off"; sub = `Kredit · počinje ${label(f.start_month)} · ${N} rata`; }
+        else if (i > N) { cls = " off"; sub = `Otplaćen · poslednja rata ${label(last)}`; }
+        else sub = `Rata ${i} od ${N} · poslednja ${label(last)} · preostalo ${fmt((N - i) * f.amount)}`;
+      }
+      return `<div class="item${cls}"><span class="grow">${esc(f.name)}${sub ? `<small>${sub}</small>` : ""}</span><span class="num">${fmt(f.amount)}</span><button class="del" data-f="${f.id}" aria-label="Obriši ${esc(f.name)}">✕</button></div>`;
+    }).join("") : `<p class="hint">Još nema stalnih troškova.</p>`;
+  }
+  if (!$("fxStart").value) $("fxStart").value = cur;
 
   // Ostali troškovi
   $("catChips").innerHTML = CATS.map((k) => `<button type="button" class="chip" aria-pressed="${k.id === selCat}" data-cat="${k.id}"><span class="dot" style="background:${col(k.c)}"></span>${k.name}</button>`).join("");
@@ -215,7 +237,7 @@ function renderReport() {
 }
 
 // ---------- Akcije ----------
-function goTo(k) { cur = k; $("vDate").value = ""; closePicker(); render(); }
+function goTo(k) { cur = k; $("vDate").value = ""; $("fxStart").value = ""; closePicker(); render(); }
 $("prev").onclick = () => goTo(shiftMonth(cur, -1));
 $("next").onclick = () => goTo(shiftMonth(cur, 1));
 
@@ -261,13 +283,22 @@ $("exAdd").onclick = () => {
   });
 };
 
+$("fxLoan").addEventListener("change", () => { $("fxLoanBox").hidden = !$("fxLoan").checked; if ($("fxLoan").checked) $("fxN").focus(); });
+$("fxName").addEventListener("input", () => {
+  if (/kredit|rata|rate|lizing|leasing/i.test($("fxName").value) && !$("fxLoan").checked) { $("fxLoan").checked = true; $("fxLoanBox").hidden = false; }
+});
 $("fxAdd").onclick = () => {
   const a = parse($("fxAmt").value), n = $("fxName").value.trim();
   if (!n) return $("fxName").focus();
   if (!a) return $("fxAmt").focus();
+  const loan = $("fxLoan").checked;
+  const N = loan ? parseInt($("fxN").value, 10) : 0;
+  const start = loan ? $("fxStart").value.trim() : "";
+  if (loan && !(N > 0)) return $("fxN").focus();
+  if (loan && !/^\d{4}-\d{2}$/.test(start)) return $("fxStart").focus();
   act(async () => {
-    await pb.collection("fixed_costs").create({ owner: me(), name: n, amount: a });
-    $("fxAmt").value = $("fxName").value = "";
+    await pb.collection("fixed_costs").create({ owner: me(), name: n, amount: a, installments: N, start_month: start });
+    $("fxAmt").value = $("fxName").value = $("fxN").value = ""; $("fxLoan").checked = false; $("fxLoanBox").hidden = true; $("fxStart").value = cur;
   });
 };
 

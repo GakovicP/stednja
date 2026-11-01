@@ -96,6 +96,14 @@ section{background:var(--card);border:1px solid var(--line);border-radius:14px;p
 .row .add{flex:none}
 .row input.amt{flex:0 0 84px}
 .row input[type=date]{flex:0 0 150px}
+.fxform{display:flex;flex-direction:column;gap:10px}
+.check{display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer;width:fit-content}
+.check input{width:auto;accent-color:var(--accent-ink)}
+.loanbox{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-radius:10px;background:var(--accent-soft)}
+.loanbox label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted);font-weight:600;min-width:0}
+.loanbox input{background:var(--card)}
+.item.off .grow,.item.off .num{color:var(--muted)}
+.item.off .num{text-decoration:line-through}
 .list{display:flex;flex-direction:column}
 .item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
@@ -216,10 +224,17 @@ section{background:var(--card);border:1px solid var(--line);border-radius:14px;p
     <div class="head"><h2>Stalni troškovi</h2><span class="num fixed-amt" id="fixSum"></span></div>
     <p class="hint" id="fixHint"></p>
     <div class="list" id="fixList"></div>
-    <div class="row">
-      <input id="fxName" placeholder="Naziv (npr. Kirija)">
-      <input id="fxAmt" inputmode="decimal" placeholder="€" class="amt">
-      <button class="add" id="fxAdd">Dodaj</button>
+    <div class="fxform" id="fxForm">
+      <div class="row">
+        <input id="fxName" placeholder="Naziv (npr. Kirija)">
+        <input id="fxAmt" inputmode="decimal" placeholder="€" class="amt" aria-label="Mesečni iznos">
+        <button class="add" id="fxAdd">Dodaj</button>
+      </div>
+      <label class="check"><input id="fxLoan" type="checkbox"> Kredit ili otplata na rate</label>
+      <div class="loanbox" id="fxLoanBox" hidden>
+        <label>Broj rata (meseci)<input id="fxN" type="number" inputmode="numeric" min="1" max="600" placeholder="npr. 24"></label>
+        <label>Prva rata<input id="fxStart" type="month" placeholder="2026-11"></label>
+      </div>
     </div>
   </section>
 
@@ -257,6 +272,6 @@ section{background:var(--card);border:1px solid var(--line);border-radius:14px;p
 </div>
 
 <script src="pocketbase.umd.js?v=0.28.1"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
