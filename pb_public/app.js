@@ -380,6 +380,17 @@ $("logout").onclick = () => { pb.authStore.clear(); showLogin(); };
 // Osveži podatke kad se aplikacija vrati u fokus (npr. sa početnog ekrana telefona)
 document.addEventListener("visibilitychange", () => { if (!document.hidden && pb.authStore.isValid) refresh(); });
 
+// Prijava se čuva u pregledaču: ako se u drugom tabu prijavi ili odjavi drugi nalog, osveži ovaj tab
+const startUser = () => pb.authStore.record?.id || null;
+let shownUser = startUser();
+window.addEventListener("storage", (e) => {
+  if (e.key !== null && e.key !== "pocketbase_auth") return;
+  let next = null;
+  try { next = JSON.parse(e.newValue || "null")?.record?.id || null; } catch (_) {}
+  if (next !== shownUser) location.reload();
+});
+pb.authStore.onChange(() => { shownUser = startUser(); });
+
 (async () => {
   if (pb.authStore.isValid) {
     try { await pb.collection("users").authRefresh(); return showApp(); }
