@@ -78,7 +78,11 @@ async function refresh() {
 function handleError(err) {
   console.error(err);
   if (err?.status === 401 || err?.status === 403) { pb.authStore.clear(); showLogin(); return; }
-  setStatus(err?.status === 0 ? "Nema veze sa serverom. Pokušaj ponovo." : "Nešto nije uspelo. Osveži stranicu.");
+  if (err?.status === 0) return setStatus("Nema veze sa serverom. Pokušaj ponovo.");
+  const d = err?.response?.data || {};
+  const field = Object.keys(d)[0];
+  const detail = field ? `${field}: ${d[field]?.message || ""}` : (err?.response?.message || err?.message || "");
+  setStatus(`Nije sačuvano (${err?.status || "?"}${detail ? ", " + detail : ""}). Osveži stranicu.`);
 }
 
 // Pokreće izmenu, pa ponovo učitava podatke
