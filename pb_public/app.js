@@ -42,6 +42,7 @@ let fixed = [];          // [{id,name,amount}]
 let monthRecs = {};      // key -> record {id,key,salary,extra,fixed_snap}
 let expenses = [];       // [{id,month,date,amount,cat,note,by}]
 
+const me = () => pb.authStore.record?.id;
 const fixSum = () => sumAmt(fixed);
 const hasPay = (k) => (monthRecs[k]?.salary || 0) > 0;
 const latestPay = () => Object.keys(monthRecs).filter(hasPay).sort().pop() || null;
@@ -92,11 +93,11 @@ async function act(fn) {
 async function ensureMonth(k) {
   if (monthRecs[k]) return monthRecs[k];
   try {
-    const r = await pb.collection("months").create({ key: k, salary: 0, extra: [], fixed_snap: null });
+    const r = await pb.collection("months").create({ owner: me(), key: k, salary: 0, extra: [], fixed_snap: null });
     monthRecs[k] = r; return r;
   } catch (err) {
     // druga osoba je možda upravo napravila isti mesec
-    const r = await pb.collection("months").getFirstListItem(pb.filter("key = {:k}", { k }));
+    const r = await pb.collection("months").getFirstListItem(pb.filter("key = {:k} && owner = {:o}", { k, o: me() }));
     monthRecs[k] = r; return r;
   }
 }
@@ -261,7 +262,7 @@ $("fxAdd").onclick = () => {
   if (!n) return $("fxName").focus();
   if (!a) return $("fxAmt").focus();
   act(async () => {
-    await pb.collection("fixed_costs").create({ name: n, amount: a });
+    await pb.collection("fixed_costs").create({ owner: me(), name: n, amount: a });
     $("fxAmt").value = $("fxName").value = "";
   });
 };
@@ -273,7 +274,7 @@ $("vAdd").onclick = () => {
   const u = pb.authStore.record;
   act(async () => {
     await pb.collection("expenses").create({
-      month: cur, date: date + " 12:00:00.000Z", amount: a, cat: selCat,
+      owner: me(), month: cur, date: date + " 12:00:00.000Z", amount: a, cat: selCat,
       note: $("vNote").value.trim(), by: u?.name || (u?.email || "").split("@")[0],
     });
     $("vAmt").value = $("vNote").value = "";
@@ -344,6 +345,7 @@ async function startLive() {
 }
 
 function showLogin() {
+  fixed = []; monthRecs = {}; expenses = []; cur = ym(today);
   pb.realtime.unsubscribe().catch(() => {});
   $("app").hidden = true; $("login").hidden = false; $("lEmail").focus();
 }

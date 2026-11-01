@@ -1,6 +1,6 @@
 # Štedna knjižica
 
-Evidencija štednje za dve osobe: plata u EUR, imenovani stalni troškovi, ostali troškovi po kategorijama, mesečni izveštaj i ušteđevina. Radi na PocketBase-u (baza + prijava u jednom programu) iza nginx-a.
+Evidencija štednje u kojoj svaki nalog ima svoju, odvojenu knjižicu: plata u EUR, imenovani stalni troškovi, ostali troškovi po kategorijama, mesečni izveštaj i ušteđevina. Radi na PocketBase-u (baza + prijava u jednom programu) iza nginx-a.
 
 ```
 pb_public/       aplikacija (HTML, JS, ikonice)
